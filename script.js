@@ -10,6 +10,42 @@ const taskInput = document.querySelector(".task-input");
 const taskList = document.querySelector(".tasks-list");
 const remainings = document.querySelector(".remaining-count");
 
+const addAndEditButtonState = function () {
+  addBtn.removeChild(addBtn.querySelector("svg"));
+  const editIcon = `<svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="size-6"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+      />
+    </svg>`;
+
+  const addIcon = `<svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      class="add-svg"
+    >
+      <path
+        fill-rule="evenodd"
+        d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+        clip-rule="evenodd"
+      />
+    </svg>`;
+
+  addBtn.insertAdjacentHTML(
+    "afterbegin",
+    addBtn.dataset.mode === "edit" ? editIcon : addIcon,
+  );
+};
+
 // Update state function
 const updateApp = function () {
   const remainingTodos = Object.values(todos.tasks).reduce(
@@ -19,6 +55,7 @@ const updateApp = function () {
   remainings.textContent = remainingTodos;
 
   localStorage.setItem("tasks", JSON.stringify(todos.tasks));
+  addAndEditButtonState();
 };
 
 // HTML Markup creator
@@ -69,8 +106,13 @@ const renderTask = function (obj) {
 
     taskList.insertAdjacentHTML("afterbegin", markup);
   });
+};
 
-  updateApp();
+const cancelEdit = function () {
+  curTask = null;
+  taskInput.value = "";
+  taskInput.blur();
+  addBtn.dataset.mode = "add";
 };
 
 // Add task event handler
@@ -93,6 +135,14 @@ const addAndEditTask = function () {
   if (addBtn.dataset.mode === "edit") {
     const taskTitle = curTask.querySelector(".task-title");
     const editStatus = todos.tasks[taskTitle.textContent];
+    if (
+      todos.tasks[taskInput.value] &&
+      taskTitle.textContent !== taskInput.value
+    ) {
+      console.log("There is another task with the same name!");
+
+      return;
+    }
 
     if (!taskInput.value) return;
 
@@ -100,9 +150,8 @@ const addAndEditTask = function () {
     todos.tasks[taskInput.value] = editStatus;
 
     taskTitle.textContent = taskInput.value;
-    addBtn.dataset.mode = "add";
-    taskInput.value = "";
-    taskInput.blur();
+
+    cancelEdit();
   }
 
   updateApp();
@@ -120,6 +169,15 @@ const deleteTask = function (task) {
 
 ////////////////////////////
 // Events
+
+taskInput.addEventListener("keydown", function (e) {
+  if (e.key !== "Escape") return;
+  if (addBtn.dataset.mode === "add") return;
+
+  cancelEdit();
+
+  updateApp();
+});
 
 addBtn.addEventListener("click", addAndEditTask);
 taskInput.addEventListener("keydown", function (e) {
@@ -161,10 +219,10 @@ taskList.addEventListener("click", function (e) {
 // Initial tasks whenever page reloads if exists
 const init = function () {
   if (!localStorage.getItem("tasks")) return;
+  addBtn.dataset.mode = "add";
   todos.tasks = JSON.parse(localStorage.getItem("tasks"));
   renderTask(todos.tasks);
   updateApp();
-  console.log(todos.tasks);
 };
 
 init();

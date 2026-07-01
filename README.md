@@ -4,7 +4,7 @@ A simple Todo application built with HTML, CSS and Vanilla JavaScript.
 
 ## Live Demo
 
-🔗 https://YOUR-LIVE-LINK.netlify.app
+🔗 https://mhdyrx.github.io/todo-app/
 
 ## Features
 

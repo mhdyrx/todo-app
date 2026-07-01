@@ -4,6 +4,16 @@ const todos = {
   tasks: {},
 };
 
+const TASK_STATUS = {
+  CHECKED: "checked",
+  UNCHECKED: "unchecked",
+};
+
+const BUTTON_MODE = {
+  ADD: "add",
+  EDIT: "edit",
+};
+
 let curTask;
 const addBtn = document.querySelector(".add-btn");
 const taskInput = document.querySelector(".task-input");
@@ -42,14 +52,14 @@ const addAndEditButtonState = function () {
 
   addBtn.insertAdjacentHTML(
     "afterbegin",
-    addBtn.dataset.mode === "edit" ? editIcon : addIcon,
+    addBtn.dataset.mode === BUTTON_MODE.EDIT ? editIcon : addIcon,
   );
 };
 
 // Update state function
 const updateApp = function () {
   const remainingTodos = Object.values(todos.tasks).reduce(
-    (acc, value) => (value === "unchecked" ? (acc += 1) : acc),
+    (acc, value) => (value === TASK_STATUS.UNCHECKED ? (acc += 1) : acc),
     0,
   );
   remainings.textContent = remainingTodos;
@@ -63,8 +73,8 @@ const createMarkup = function (value, taskStatus) {
   if (!value) return;
 
   const markup = `
-      <li class="task ${taskStatus === "checked" ? "checked" : ""}">
-        <input type="checkbox" class="task-check" ${taskStatus === "checked" ? "checked" : ""}/>
+      <li class="task ${taskStatus === TASK_STATUS.CHECKED ? TASK_STATUS.CHECKED : ""}">
+        <input type="checkbox" class="task-check" ${taskStatus === TASK_STATUS.CHECKED ? TASK_STATUS.CHECKED : ""}/>
 
         <p class="task-title">${value}</p>
 
@@ -112,54 +122,68 @@ const cancelEdit = function () {
   curTask = null;
   taskInput.value = "";
   taskInput.blur();
-  addBtn.dataset.mode = "add";
+  addBtn.dataset.mode = BUTTON_MODE.ADD;
+};
+
+const addTask = function () {
+  const markup = createMarkup(taskInput.value, TASK_STATUS.UNCHECKED);
+  if (!markup) return;
+  if (todos.tasks[taskInput.value]) {
+    console.log("There is another task with the same name!");
+    taskInput.value = "";
+
+    return;
+  }
+  todos.tasks[taskInput.value] = TASK_STATUS.UNCHECKED;
+
+  taskList.insertAdjacentHTML("afterbegin", markup);
+  taskInput.value = "";
+};
+
+const getTaskTitle = function (task) {
+  const taskTitle = task.querySelector(".task-title");
+  return taskTitle;
+};
+
+const getClosestTask = function (btn) {
+  const task = btn.closest(".task");
+  return task;
+};
+
+const editTask = function () {
+  const taskTitle = getTaskTitle(curTask);
+  const editStatus = todos.tasks[taskTitle.textContent];
+  if (
+    todos.tasks[taskInput.value] &&
+    taskTitle.textContent !== taskInput.value
+  ) {
+    console.log("There is another task with the same name!");
+
+    return;
+  }
+
+  if (!taskInput.value) return;
+
+  delete todos.tasks[taskTitle.textContent];
+  todos.tasks[taskInput.value] = editStatus;
+
+  taskTitle.textContent = taskInput.value;
+
+  cancelEdit();
 };
 
 // Add task event handler
-const addAndEditTask = function () {
-  if (addBtn.dataset.mode === "add") {
-    const markup = createMarkup(taskInput.value, "unchecked");
-    if (!markup) return;
-    if (todos.tasks[taskInput.value]) {
-      console.log("There is another task with the same name!");
-      taskInput.value = "";
+const handleMainButton = function () {
+  if (addBtn.dataset.mode === BUTTON_MODE.ADD) addTask();
 
-      return;
-    }
-    todos.tasks[taskInput.value] = "unchecked";
-
-    taskList.insertAdjacentHTML("afterbegin", markup);
-    taskInput.value = "";
-  }
-
-  if (addBtn.dataset.mode === "edit") {
-    const taskTitle = curTask.querySelector(".task-title");
-    const editStatus = todos.tasks[taskTitle.textContent];
-    if (
-      todos.tasks[taskInput.value] &&
-      taskTitle.textContent !== taskInput.value
-    ) {
-      console.log("There is another task with the same name!");
-
-      return;
-    }
-
-    if (!taskInput.value) return;
-
-    delete todos.tasks[taskTitle.textContent];
-    todos.tasks[taskInput.value] = editStatus;
-
-    taskTitle.textContent = taskInput.value;
-
-    cancelEdit();
-  }
+  if (addBtn.dataset.mode === BUTTON_MODE.EDIT) editTask();
 
   updateApp();
 };
 
 // Delete task event handler
 const deleteTask = function (task) {
-  const taskTitle = task.querySelector(".task-title").textContent;
+  const taskTitle = getTaskTitle(task).textContent;
 
   delete todos.tasks[taskTitle];
   task.remove();
@@ -172,17 +196,17 @@ const deleteTask = function (task) {
 
 taskInput.addEventListener("keydown", function (e) {
   if (e.key !== "Escape") return;
-  if (addBtn.dataset.mode === "add") return;
+  if (addBtn.dataset.mode === BUTTON_MODE.ADD) return;
 
   cancelEdit();
 
   updateApp();
 });
 
-addBtn.addEventListener("click", addAndEditTask);
+addBtn.addEventListener("click", handleMainButton);
 taskInput.addEventListener("keydown", function (e) {
   if (e.key !== "Enter") return;
-  addAndEditTask();
+  handleMainButton();
 });
 
 taskList.addEventListener("click", function (e) {
@@ -191,26 +215,30 @@ taskList.addEventListener("click", function (e) {
   const editBtn = e.target.closest(".edit-btn");
 
   if (deleteBtn) {
-    const task = deleteBtn.closest(".task");
+    const task = getClosestTask(deleteBtn);
     deleteTask(task);
   }
 
   if (checkBtn) {
-    const task = checkBtn.closest(".task");
-    const taskTitle = task.querySelector(".task-title").textContent;
+    const task = getClosestTask(checkBtn);
+
+    const taskTitle = getTaskTitle(task).textContent;
     task.classList.toggle("checked");
 
-    if (task.classList.contains("checked")) todos.tasks[taskTitle] = "checked";
-    else todos.tasks[taskTitle] = "unchecked";
+    if (task.classList.contains("checked"))
+      todos.tasks[taskTitle] = TASK_STATUS.CHECKED;
+    else todos.tasks[taskTitle] = TASK_STATUS.UNCHECKED;
   }
 
   if (editBtn) {
-    const task = editBtn.closest(".task");
-    addBtn.dataset.mode = "edit";
+    const task = getClosestTask(editBtn);
     curTask = task;
 
+    const taskTitle = getTaskTitle(curTask).textContent;
+    addBtn.dataset.mode = BUTTON_MODE.EDIT;
+
     taskInput.focus();
-    taskInput.value = curTask.querySelector(".task-title").textContent;
+    taskInput.value = taskTitle;
   }
 
   updateApp();
@@ -219,7 +247,7 @@ taskList.addEventListener("click", function (e) {
 // Initial tasks whenever page reloads if exists
 const init = function () {
   if (!localStorage.getItem("tasks")) return;
-  addBtn.dataset.mode = "add";
+  addBtn.dataset.mode = BUTTON_MODE.ADD;
   todos.tasks = JSON.parse(localStorage.getItem("tasks"));
   renderTask(todos.tasks);
   updateApp();

@@ -29,7 +29,4 @@ A simple Todo application built with HTML, CSS and Vanilla JavaScript.
 
 ## Future Improvements
 
-- Responsive Design
-- Edit Tasks
 - Filter Tasks
-- Drag and Drop

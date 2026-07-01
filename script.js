@@ -4,11 +4,13 @@ const todos = {
   tasks: {},
 };
 
+let curTask;
 const addBtn = document.querySelector(".add-btn");
 const taskInput = document.querySelector(".task-input");
 const taskList = document.querySelector(".tasks-list");
 const remainings = document.querySelector(".remaining-count");
 
+// Update state function
 const updateApp = function () {
   const remainingTodos = Object.values(todos.tasks).reduce(
     (acc, value) => (value === "unchecked" ? (acc += 1) : acc),
@@ -19,11 +21,12 @@ const updateApp = function () {
   localStorage.setItem("tasks", JSON.stringify(todos.tasks));
 };
 
+// HTML Markup creator
 const createMarkup = function (value, taskStatus) {
   if (!value) return;
 
   const markup = `
-    <li class="task ${taskStatus === "checked" ? "checked" : ""}">
+      <li class="task ${taskStatus === "checked" ? "checked" : ""}">
         <input type="checkbox" class="task-check" ${taskStatus === "checked" ? "checked" : ""}/>
 
         <p class="task-title">${value}</p>
@@ -55,6 +58,7 @@ const createMarkup = function (value, taskStatus) {
   return markup;
 };
 
+// Render tasks from storage
 const renderTask = function (obj) {
   Object.entries(obj).forEach((objEl) => {
     const title = objEl[0];
@@ -69,26 +73,42 @@ const renderTask = function (obj) {
   updateApp();
 };
 
-const addTask = function () {
-  const markup = createMarkup(taskInput.value, "unchecked");
+// Add task event handler
+const addAndEditTask = function () {
+  if (addBtn.dataset.mode === "add") {
+    const markup = createMarkup(taskInput.value, "unchecked");
+    if (!markup) return;
+    if (todos.tasks[taskInput.value]) {
+      console.log("There is another task with the same name!");
+      taskInput.value = "";
 
-  if (!markup) return;
-  if (todos.tasks[taskInput.value]) {
-    console.log("There is another task with the same name!");
+      return;
+    }
+    todos.tasks[taskInput.value] = "unchecked";
+
+    taskList.insertAdjacentHTML("afterbegin", markup);
     taskInput.value = "";
-
-    return;
   }
 
-  todos.tasks[taskInput.value] = "unchecked";
+  if (addBtn.dataset.mode === "edit") {
+    const taskTitle = curTask.querySelector(".task-title");
+    const editStatus = todos.tasks[taskTitle.textContent];
 
-  taskList.insertAdjacentHTML("afterbegin", markup);
+    if (!taskInput.value) return;
 
-  taskInput.value = "";
+    delete todos.tasks[taskTitle.textContent];
+    todos.tasks[taskInput.value] = editStatus;
+
+    taskTitle.textContent = taskInput.value;
+    addBtn.dataset.mode = "add";
+    taskInput.value = "";
+    taskInput.blur();
+  }
 
   updateApp();
 };
 
+// Delete task event handler
 const deleteTask = function (task) {
   const taskTitle = task.querySelector(".task-title").textContent;
 
@@ -98,23 +118,27 @@ const deleteTask = function (task) {
   updateApp();
 };
 
-addBtn.addEventListener("click", addTask);
+////////////////////////////
+// Events
+
+addBtn.addEventListener("click", addAndEditTask);
 taskInput.addEventListener("keydown", function (e) {
   if (e.key !== "Enter") return;
-  addTask();
+  addAndEditTask();
 });
 
 taskList.addEventListener("click", function (e) {
-  const btn = e.target.closest(".delete-btn");
-  const check = e.target.closest(".task-check");
+  const deleteBtn = e.target.closest(".delete-btn");
+  const checkBtn = e.target.closest(".task-check");
+  const editBtn = e.target.closest(".edit-btn");
 
-  if (btn) {
-    const task = btn.closest(".task");
+  if (deleteBtn) {
+    const task = deleteBtn.closest(".task");
     deleteTask(task);
   }
 
-  if (check) {
-    const task = check.closest(".task");
+  if (checkBtn) {
+    const task = checkBtn.closest(".task");
     const taskTitle = task.querySelector(".task-title").textContent;
     task.classList.toggle("checked");
 
@@ -122,14 +146,25 @@ taskList.addEventListener("click", function (e) {
     else todos.tasks[taskTitle] = "unchecked";
   }
 
+  if (editBtn) {
+    const task = editBtn.closest(".task");
+    addBtn.dataset.mode = "edit";
+    curTask = task;
+
+    taskInput.focus();
+    taskInput.value = curTask.querySelector(".task-title").textContent;
+  }
+
   updateApp();
 });
 
+// Initial tasks whenever page reloads if exists
 const init = function () {
   if (!localStorage.getItem("tasks")) return;
   todos.tasks = JSON.parse(localStorage.getItem("tasks"));
   renderTask(todos.tasks);
+  updateApp();
+  console.log(todos.tasks);
 };
 
-// localStorage.clear();
 init();
